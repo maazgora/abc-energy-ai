@@ -191,40 +191,96 @@ def calculate_usage_from_sqft(sqft: float, segment: str) -> float:
 
 ## Project Structure
 
-```text
 backend/
   app/
-    main.py
-    orchestrator.py
+    main.py                  # FastAPI entry point
+    api/
+      endpoints.py           # API routes (/chat, etc.)
+    core/                    # Config / shared utilities (future-ready)
     models/
-      database.py
+      database.py            # SQLModel definitions (Lead, ConversationState)
     services/
-      evaluation.py
-      estimation.py
+      orchestrator.py        # Conversation state machine + flow control
+      logic.py               # Business logic (tier evaluation, estimation)
+  migrations/                # DB migration support (future scalability)
+  requirements.txt
+  .env                      # Environment variables (excluded via .gitignore)
 
 frontend/
   src/
-    components/
+    assets/                 # Static assets
     hooks/
-      useChat.ts
-    pages/
-```
+      useChat.ts            # Streaming + state management hook
+    App.tsx                 # Main UI component
+    main.tsx                # Entry point
+    index.css / App.css     # Styling
+  public/
+  node_modules/             # Ignored
+  eslint.config.js
+  .gitignore
+
+root/
+  README.md
+  .gitignore
 
 ---
 
 ## Observability & Debugging
 
-* Structured logs for:
+To ensure reliability and debuggability, the system includes multiple layers of observability:
 
-  * state transitions
-  * tool call payloads
-  * completion triggers
-* Network-level inspection of SSE stream (browser DevTools)
-* DB verification via psql / DBeaver
-* Guardrails to prevent:
+### 1. Structured Logging
+Key events are logged across the backend:
 
-  * infinite loops
-  * premature classification
+- Conversation state updates (before/after tool calls)
+- Extracted LLM tool payloads
+- Completion checks and tier evaluation triggers
+- Database persistence events
+
+This allows tracing the full lifecycle of a lead from input → extraction → classification.
+
+---
+
+### 2. Streaming Debugging (SSE)
+- Network tab (DevTools) is used to inspect real-time streaming responses
+- Differentiates between:
+  - `data:` → user-visible content
+  - `[METADATA]` → structured state updates
+- Helps debug UI sync issues and partial responses
+
+---
+
+### 3. Database Verification
+- PostgreSQL inspected via:
+  - `psql` CLI
+  - DBeaver (GUI)
+- Confirms:
+  - lead persistence
+  - conversation logging
+  - correct session linkage
+
+---
+
+### 4. Orchestration Guardrails
+The backend enforces strict controls to prevent:
+
+- **Infinite loops**
+  → next question is derived only from missing fields
+
+- **Premature classification**
+  → tier evaluation only runs when all required variables are present
+
+- **Duplicate DB writes**
+  → guarded using a `lead_saved` flag per session
+
+---
+
+### 5. Error Handling
+- Graceful handling of:
+  - malformed tool responses
+  - missing fields
+  - streaming interruptions
+- Fallback responses ensure the conversation continues
 
 ---
 
@@ -445,19 +501,21 @@ This architecture supports:
 
 ## Author
 
-Maaz G
+**Maaz Gora**
 Full Stack Developer | AI Engineer
 
 ---
 
 ## Summary
 
-A **production-style AI system** demonstrating:
+A production-grade AI lead qualification system that combines:
 
-* Real-time conversational UX
-* Deterministic orchestration
-* Structured data extraction
-* Scalable backend design
-* Persistent lead intelligence
+- Real-time conversational UX via streaming responses  
+- Deterministic orchestration to ensure reliable decision-making  
+- Structured data extraction using LLM function calling  
+- Business-rule-driven classification using a multi-variable qualification matrix  
+- Persistent storage of lead intelligence and conversation history  
 
-Designed to mirror real-world AI SaaS architecture.
+Designed to simulate a real-world energy sales workflow, where incomplete inputs are handled through intelligent fallback logic (e.g., square footage → usage estimation).
+
+This system demonstrates how AI can be integrated into enterprise pipelines with **control, transparency, and scalability**, rather than relying on black-box automation.
